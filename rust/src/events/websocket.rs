@@ -3,7 +3,7 @@ use std::time::Duration;
 
 use anyhow::Result;
 use futures::{SinkExt, StreamExt};
-use serde_json::Value;
+use serde_json::{json, Value};
 use solana_sdk::pubkey::Pubkey;
 use std::str::FromStr;
 use tokio::sync::mpsc::UnboundedSender;
@@ -15,18 +15,30 @@ use crate::config::Config;
 
 pub async fn run(
     ws_endpoint: String,
-    _config: Arc<Config>,
+    config: Arc<Config>,
     tx: UnboundedSender<TokenEvent>,
 ) -> Result<()> {
     log::info!("Starting websocket listener at {ws_endpoint}");
     let mut backoff = Duration::from_millis(500);
+    let program_id = config.program_id()?.to_string();
 
     loop {
         match connect_async(&ws_endpoint).await {
             Ok((mut socket, _)) => {
                 log::info!("WebSocket connected");
+                let subscribe_message = json!({
+                    "jsonrpc": "2.0",
+                    "id": 1,
+                    "method": "logsSubscribe",
+                    "params": [
+                        { "mentions": [program_id.clone()] },
+                        { "commitment": "processed" }
+                    ]
+                })
+                .to_string();
+
                 let _ = socket
-                    .send(Message::text("{}"))
+                    .send(Message::text(subscribe_message))
                     .await
                     .map_err(|err| log::warn!("Failed to send subscribe message: {err}"));
 
