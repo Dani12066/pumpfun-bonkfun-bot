@@ -25,7 +25,7 @@ pub async fn dispatch_transaction(
     futures.push(Box::pin(send_via_rpc(rpc_client, transaction.clone())));
 
     if let Some(url) = config.endpoints.jito_api_url.clone() {
-        futures.push(Box::pin(send_via_http(
+        futures.push(Box::pin(send_via_jito(
             url,
             encoded.clone(),
             http_client.clone(),
@@ -62,6 +62,37 @@ async fn send_via_rpc(rpc_client: Arc<RpcClient>, transaction: Transaction) -> R
 #[derive(Debug, Deserialize)]
 struct RpcResponse {
     result: Option<String>,
+}
+
+async fn send_via_jito(url: String, encoded: String, client: Client) -> Result<Signature> {
+    // Jito's sendBundle API expects an array of base64-encoded transactions
+    let payload = json!({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "sendBundle",
+        "params": [[encoded]],
+    });
+
+    let resp = client
+        .post(url)
+        .json(&payload)
+        .send()
+        .await
+        .map_err(|err| anyhow!("Jito HTTP send failed: {err}"))?;
+    let status = resp.status();
+    let body: serde_json::Value = resp.json().await?;
+
+    // Jito returns bundle IDs, not transaction signatures
+    // Extract the first bundle ID from the result array
+    if let Some(result) = body.get("result") {
+        if let Some(bundle_id) = result.as_array().and_then(|arr| arr.first()).and_then(|v| v.as_str()) {
+            // Parse bundle ID as signature (they're both base58 strings)
+            let signature: Signature = bundle_id.parse()?;
+            return Ok(signature);
+        }
+    }
+
+    Err(anyhow!("Jito HTTP send failed with status {status}: {body}"))
 }
 
 async fn send_via_http(url: String, encoded: String, client: Client) -> Result<Signature> {
