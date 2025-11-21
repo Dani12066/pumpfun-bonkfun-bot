@@ -1,0 +1,35 @@
+# Example configuration for the Rust-based Pump.fun sniper.
+
+[endpoints]
+rpc_http_url = "https://solana-mainnet.helius.rpc/"
+ws_url = "wss://solana-mainnet.helius.rpc/"
+laserstream_grpc_url = "grpc+https://helius-endpoint.example.com"
+jito_api_url = "https://mainnet.block-engine.jito.wtf/api/v1/bundles"
+nozomi_rpc_url = "https://rpc.nozomi.temporal.xyz/your-key"
+
+keypair_path = "/home/solana/bot-keypair.json"
+pump_fun_program = "PuMpFuN11111111111111111111111111111111111"
+
+purchase_strategy = { fixed_sol = 0.5 }
+max_slippage_bps = 500
+
+dry_run = true
+log_level = "info"
+blockhash_refresh_ms = 400
+balance_refresh_ms = 1500
+
+[fee_config]
+priority_fee_lamports = 10000
+use_jito_tip = true
+jito_tip_lamports = 1000000
+
+[profit_guard]
+take_profit_factor = 2.0
+stop_loss_factor = 0.5
+
+[dev_filters]
+dev_whitelist = [
+  "Fg6PaFpoGXkYsidMpWFKMRGhnzY4NZzjMq1p7cBqG1bM",
+]
+dev_blacklist = []
+dev_max_tokens_per_min = 3
